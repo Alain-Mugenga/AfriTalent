@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Athletes | AfriTalent</title>
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+
+<nav class="navbar">
+  <div class="navbar-inner">
+    <a href="/" class="nav-logo"><span class="logo-icon">🌍</span><span>AfriTalent</span></a>
+    <div class="hamburger"><span></span><span></span><span></span></div>
+    <ul class="nav-links">
+      <li><a href="/">Home</a></li>
+      <li><a href="/pages/athletes.html" class="active">Athletes</a></li>
+      <li><a href="/pages/stories.html">Success Stories</a></li>
+      <li><a href="/pages/register.html">Register as Athlete</a></li>
+      <ul id="nav-auth" style="display:contents;list-style:none"></ul>
+    </ul>
+  </div>
+</nav>
+
+<div class="page-header">
+  <h1>🏆 Our Athletes</h1>
+  <p>Discover Africa's next generation of sporting champions</p>
+</div>
+
+<section class="section">
+  <div class="section-inner">
+    <div style="display:flex;gap:1rem;margin-bottom:2rem;flex-wrap:wrap;align-items:center">
+      <input type="text" id="search-input" placeholder="🔍 Search athletes..." style="flex:1;min-width:200px;padding:0.7rem 1rem;border:2px solid var(--border);border-radius:8px;font-size:0.95rem">
+      <select id="sport-filter" style="padding:0.7rem 1rem;border:2px solid var(--border);border-radius:8px;font-size:0.95rem;background:white">
+        <option value="">All Sports</option>
+        <option value="Football">⚽ Football</option>
+        <option value="Basketball">🏀 Basketball</option>
+        <option value="Athletics">🏃 Athletics</option>
+        <option value="Boxing">🥊 Boxing</option>
+        <option value="Swimming">🏊 Swimming</option>
+        <option value="Tennis">🎾 Tennis</option>
+        <option value="Cycling">🚴 Cycling</option>
+        <option value="Weightlifting">🏋️ Weightlifting</option>
+        <option value="Wrestling">🤼 Wrestling</option>
+      </select>
+      <select id="country-filter" style="padding:0.7rem 1rem;border:2px solid var(--border);border-radius:8px;font-size:0.95rem;background:white">
+        <option value="">All Countries</option>
+        <option value="Rwanda">🇷🇼 Rwanda</option>
+        <option value="Burundi">🇧🇮 Burundi</option>
+        <option value="Uganda">🇺🇬 Uganda</option>
+        <option value="Kenya">🇰🇪 Kenya</option>
+        <option value="Tanzania">🇹🇿 Tanzania</option>
+        <option value="Nigeria">🇳🇬 Nigeria</option>
+        <option value="Ghana">🇬🇭 Ghana</option>
+        <option value="South Africa">🇿🇦 South Africa</option>
+        <option value="Ethiopia">🇪🇹 Ethiopia</option>
+        <option value="Senegal">🇸🇳 Senegal</option>
+      </select>
+    </div>
+    <div class="athletes-grid" id="athletes-grid">
+      <div class="loading-spinner" style="grid-column:1/-1"><div class="spinner"></div><div>Loading athletes...</div></div>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div class="footer-inner">
+    <div class="footer-bottom"><p>&copy; 2026 African Athlete Talent Platform.</p></div>
+  </div>
+</footer>
+
+<script type="module">
+import { API, sportEmoji, countryFlag } from '/js/main.js';
+
+let allAthletes = [];
+
+function renderCard(a) {
+  const stats = a.stats || {};
+  return `
+    <div class="athlete-card reveal">
+      <div class="athlete-card-img">
+        <img src="${a.photo_url || ''}" alt="${a.name}" loading="lazy" onerror="this.style.display='none'">
+        <div class="athlete-card-sport">${sportEmoji(a.sport)} ${a.sport}</div>
+        ${a.is_featured ? '<div class="athlete-card-featured">⭐ Featured</div>' : ''}
+      </div>
+      <div class="athlete-card-body">
+        <h3>${a.name}</h3>
+        <div class="athlete-country">${countryFlag(a.country)} ${a.country}${a.age ? ` · ${a.age} yrs` : ''}</div>
+        <p class="athlete-bio">${a.bio || ''}</p>
+        ${Object.keys(stats).length > 0 ? `<div class="athlete-stats-mini">${Object.entries(stats).slice(0,4).map(([k,v])=>`<div class="mini-stat"><div class="mini-stat-val">${v}</div><div class="mini-stat-label">${k}</div></div>`).join('')}</div>` : ''}
+        <div class="athlete-card-footer"><a href="/pages/athlete.html?id=${a.id}" class="btn btn-green btn-sm">View Profile</a></div>
+      </div>
+    </div>`;
+}
+
+function renderGrid(athletes) {
+  const grid = document.getElementById('athletes-grid');
+  if (!athletes || athletes.length === 0) {
+    grid.innerHTML = `<div class="empty-state" style="grid-column:1/-1"><div class="icon">🔎</div><p>No athletes found.</p></div>`;
+    return;
+  }
+  grid.innerHTML = athletes.map(renderCard).join('');
+  document.querySelectorAll('.reveal:not(.visible)').forEach(el => {
+    const obs = new IntersectionObserver(entries => { entries.forEach(e => { if(e.isIntersecting){e.target.classList.add('visible');obs.unobserve(e.target);} }); },{threshold:0.05});
+    obs.observe(el);
+  });
+}
+
+function filterAthletes() {
+  const q = document.getElementById('search-input').value.toLowerCase();
+  const sport = document.getElementById('sport-filter').value;
+  const country = document.getElementById('country-filter').value;
+  return allAthletes.filter(a =>
+    (!q || a.name.toLowerCase().includes(q) || (a.bio||'').toLowerCase().includes(q)) &&
+    (!sport || a.sport === sport) &&
+    (!country || a.country === country)
+  );
+}
+
+async function load() {
+  try {
+    const res = await fetch(`${API}/athletes`, { credentials: 'include' });
+    const data = await res.json();
+    allAthletes = data.athletes || [];
+    const urlSport = new URLSearchParams(window.location.search).get('sport');
+    if (urlSport) document.getElementById('sport-filter').value = urlSport;
+    renderGrid(filterAthletes());
+  } catch {
+    document.getElementById('athletes-grid').innerHTML = `<div class="empty-state" style="grid-column:1/-1"><p>Failed to load athletes.</p></div>`;
+  }
+}
+
+document.getElementById('search-input')?.addEventListener('input', () => renderGrid(filterAthletes()));
+document.getElementById('sport-filter')?.addEventListener('change', () => renderGrid(filterAthletes()));
+document.getElementById('country-filter')?.addEventListener('change', () => renderGrid(filterAthletes()));
+load();
+</script>
+</body>
+</html>

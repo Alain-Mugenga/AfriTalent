@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Athlete Profile | AfriTalent</title>
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+
+<nav class="navbar">
+  <div class="navbar-inner">
+    <a href="/" class="nav-logo"><span class="logo-icon">🌍</span><span>AfriTalent</span></a>
+    <div class="hamburger"><span></span><span></span><span></span></div>
+    <ul class="nav-links">
+      <li><a href="/">Home</a></li>
+      <li><a href="/pages/athletes.html">Athletes</a></li>
+      <li><a href="/pages/stories.html">Success Stories</a></li>
+      <li><a href="/pages/register.html">Register as Athlete</a></li>
+      <ul id="nav-auth" style="display:contents;list-style:none"></ul>
+    </ul>
+  </div>
+</nav>
+
+<div class="profile-page">
+  <div class="profile-inner" id="profile-container">
+    <div class="loading-spinner"><div class="spinner"></div><div>Loading profile...</div></div>
+  </div>
+</div>
+
+<footer>
+  <div class="footer-inner">
+    <div class="footer-bottom"><p>&copy; 2026 African Athlete Talent Platform.</p></div>
+  </div>
+</footer>
+
+<script type="module">
+import { API, sportEmoji, countryFlag } from '/js/main.js';
+
+async function loadProfile() {
+  const container = document.getElementById('profile-container');
+  const id = new URLSearchParams(window.location.search).get('id');
+  if (!id) { container.innerHTML = `<div class="empty-state"><div class="icon">❌</div><p>No athlete ID. <a href="/pages/athletes.html" style="color:var(--primary)">Back to athletes</a></p></div>`; return; }
+  try {
+    const res = await fetch(`${API}/athletes/${id}`, { credentials: 'include' });
+    if (!res.ok) throw new Error();
+    const { athlete: a } = await res.json();
+    const stats = a.stats || {};
+    document.title = `${a.name} | AfriTalent`;
+    container.innerHTML = `
+      <div style="margin-bottom:1rem"><a href="/pages/athletes.html" style="color:var(--primary);font-weight:600">← Back to Athletes</a></div>
+      <div class="profile-header">
+        <div class="profile-img"><img src="${a.photo_url || ''}" alt="${a.name}" onerror="this.style.display='none'"></div>
+        <div class="profile-info">
+          ${a.is_featured ? '<div style="color:var(--primary);font-size:0.85rem;font-weight:700;margin-bottom:0.5rem">⭐ FEATURED ATHLETE</div>' : ''}
+          <div class="profile-name">${a.name}</div>
+          <div class="profile-sport-badge">${sportEmoji(a.sport)} ${a.sport}</div>
+          <div class="profile-country">${countryFlag(a.country)} ${a.country}${a.age ? ` · Age ${a.age}` : ''}</div>
+          <p class="profile-bio">${a.bio || ''}</p>
+          ${Object.keys(stats).length > 0 ? `<div class="profile-stats">${Object.entries(stats).slice(0,6).map(([k,v])=>`<div class="profile-stat"><div class="profile-stat-val">${v}</div><div class="profile-stat-label">${k}</div></div>`).join('')}</div>` : ''}
+        </div>
+      </div>
+      ${a.achievements ? `<div style="background:white;border-radius:var(--radius);padding:2rem;box-shadow:0 4px 20px var(--shadow);margin-bottom:1.5rem"><h3 style="color:var(--primary-dark);margin-bottom:1rem">🏆 Achievements</h3><p style="line-height:1.9;white-space:pre-line">${a.achievements}</p></div>` : ''}
+      ${a.highlight_video_url ? `<div style="background:white;border-radius:var(--radius);padding:2rem;box-shadow:0 4px 20px var(--shadow);margin-bottom:1.5rem"><h3 style="color:var(--primary-dark);margin-bottom:1rem">🎥 Highlight Video</h3><a href="${a.highlight_video_url}" target="_blank" class="btn btn-primary">▶ Watch Highlights</a></div>` : ''}
+      <div style="text-align:center;padding:2rem;background:white;border-radius:var(--radius);box-shadow:0 4px 20px var(--shadow)">
+        <p style="color:var(--text-muted);margin-bottom:1rem">Inspired by ${a.name.split(' ')[0]}?</p>
+        <a href="/pages/register.html" class="btn btn-green">Join AfriTalent Today 🌟</a>
+      </div>`;
+  } catch {
+    container.innerHTML = `<div class="empty-state"><div class="icon">❌</div><p>Athlete not found. <a href="/pages/athletes.html" style="color:var(--primary)">Back to athletes</a></p></div>`;
+  }
+}
+loadProfile();
+</script>
+</body>
+</html>

@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Register | AfriTalent</title>
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+
+<nav class="navbar">
+  <div class="navbar-inner">
+    <a href="/" class="nav-logo"><span class="logo-icon">🌍</span><span>AfriTalent</span></a>
+    <div class="hamburger"><span></span><span></span><span></span></div>
+    <ul class="nav-links">
+      <li><a href="/">Home</a></li>
+      <li><a href="/pages/athletes.html">Athletes</a></li>
+      <li><a href="/pages/stories.html">Success Stories</a></li>
+      <li><a href="/pages/register.html" class="active">Register</a></li>
+      <ul id="nav-auth" style="display:contents;list-style:none"></ul>
+    </ul>
+  </div>
+</nav>
+
+<div class="form-page">
+  <div class="form-card">
+    <h2>Join AfriTalent 🌍</h2>
+    <p class="form-subtitle">Create your athlete profile and start your journey</p>
+    <div class="alert alert-error" id="reg-error"></div>
+    <div class="alert alert-success" id="reg-success"></div>
+    <div class="form-group"><label>Full Name *</label><input type="text" id="reg-name" placeholder="e.g. Alain Mugenga"></div>
+    <div class="form-group"><label>Email Address *</label><input type="email" id="reg-email" placeholder="your@email.com"></div>
+    <div class="form-group"><label>Password *</label><input type="password" id="reg-password" placeholder="Min 6 characters"></div>
+    <div class="form-group">
+      <label>Country *</label>
+      <select id="reg-country">
+        <option value="">Select your country</option>
+        <option value="Rwanda">🇷🇼 Rwanda</option><option value="Burundi">🇧🇮 Burundi</option>
+        <option value="Uganda">🇺🇬 Uganda</option><option value="Kenya">🇰🇪 Kenya</option>
+        <option value="Tanzania">🇹🇿 Tanzania</option><option value="Nigeria">🇳🇬 Nigeria</option>
+        <option value="Ghana">🇬🇭 Ghana</option><option value="South Africa">🇿🇦 South Africa</option>
+        <option value="Ethiopia">🇪🇹 Ethiopia</option><option value="Senegal">🇸🇳 Senegal</option>
+        <option value="Cameroon">🇨🇲 Cameroon</option><option value="Morocco">🇲🇦 Morocco</option>
+        <option value="Other">🌍 Other</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label>Primary Sport *</label>
+      <select id="reg-sport">
+        <option value="">Select your sport</option>
+        <option value="Football">⚽ Football</option><option value="Basketball">🏀 Basketball</option>
+        <option value="Athletics">🏃 Athletics</option><option value="Boxing">🥊 Boxing</option>
+        <option value="Swimming">🏊 Swimming</option><option value="Tennis">🎾 Tennis</option>
+        <option value="Cycling">🚴 Cycling</option><option value="Weightlifting">🏋️ Weightlifting</option>
+        <option value="Wrestling">🤼 Wrestling</option><option value="Rugby">🏈 Rugby</option>
+        <option value="Other">🏅 Other</option>
+      </select>
+    </div>
+    <div class="form-group"><label>Age</label><input type="number" id="reg-age" placeholder="Your age (12-25)" min="12" max="30"></div>
+    <div class="form-group"><label>Short Bio</label><textarea id="reg-bio" placeholder="Tell us about yourself..."></textarea></div>
+    <div class="form-group"><label>Achievements</label><textarea id="reg-achievements" placeholder="Awards, titles, personal bests..."></textarea></div>
+    <div class="form-group"><label>Highlight Video URL (YouTube / Vimeo)</label><input type="url" id="reg-video" placeholder="https://youtube.com/watch?v=..."></div>
+    <button class="form-btn" id="reg-btn">Create My Profile 🚀</button>
+    <div class="form-switch">Already have an account? <a href="/pages/login.html">Login here</a></div>
+  </div>
+</div>
+
+<footer>
+  <div class="footer-inner"><div class="footer-bottom"><p>&copy; 2026 African Athlete Talent Platform.</p></div></div>
+</footer>
+
+<script type="module">
+import { API, showToast } from '/js/main.js';
+
+document.getElementById('reg-btn').addEventListener('click', async () => {
+  const name = document.getElementById('reg-name').value.trim();
+  const email = document.getElementById('reg-email').value.trim();
+  const password = document.getElementById('reg-password').value;
+  const country = document.getElementById('reg-country').value;
+  const sport = document.getElementById('reg-sport').value;
+  const age = document.getElementById('reg-age').value;
+  const bio = document.getElementById('reg-bio').value.trim();
+  const achievements = document.getElementById('reg-achievements').value.trim();
+  const videoUrl = document.getElementById('reg-video').value.trim();
+  const errEl = document.getElementById('reg-error');
+  const succEl = document.getElementById('reg-success');
+  errEl.style.display='none'; succEl.style.display='none';
+
+  if (!name||!email||!password||!country||!sport) { errEl.textContent='Please fill in all required fields.'; errEl.style.display='block'; return; }
+  if (password.length < 6) { errEl.textContent='Password must be at least 6 characters.'; errEl.style.display='block'; return; }
+
+  const btn = document.getElementById('reg-btn');
+  btn.textContent='Creating profile...'; btn.disabled=true;
+  try {
+    const userRes = await fetch(`${API}/auth/register`, { method:'POST', headers:{'Content-Type':'application/json'}, credentials:'include', body: JSON.stringify({ name, email, password, role:'athlete' }) });
+    const userData = await userRes.json();
+    if (!userRes.ok) { errEl.textContent=userData.error||'Registration failed.'; errEl.style.display='block'; btn.textContent='Create My Profile 🚀'; btn.disabled=false; return; }
+    await fetch(`${API}/athletes`, { method:'POST', headers:{'Content-Type':'application/json'}, credentials:'include', body: JSON.stringify({ name, country, sport, age: age?parseInt(age):null, bio, achievements, highlight_video_url: videoUrl||null }) });
+    succEl.textContent='🎉 Profile created! Awaiting admin approval. Redirecting...'; succEl.style.display='block';
+    showToast('Profile created!');
+    setTimeout(() => window.location.href = '/pages/athletes.html', 2500);
+  } catch { errEl.textContent='Something went wrong. Please try again.'; errEl.style.display='block'; btn.textContent='Create My Profile 🚀'; btn.disabled=false; }
+});
+</script>
+</body>
+</html>

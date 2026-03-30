@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin Panel | AfriTalent</title>
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+
+<nav class="navbar">
+  <div class="navbar-inner">
+    <a href="/" class="nav-logo"><span class="logo-icon">🌍</span><span>AfriTalent</span></a>
+    <div class="hamburger"><span></span><span></span><span></span></div>
+    <ul class="nav-links">
+      <li><a href="/">Home</a></li>
+      <li><a href="/pages/athletes.html">Athletes</a></li>
+      <li><a href="/pages/admin.html" class="active">Admin</a></li>
+      <ul id="nav-auth" style="display:contents;list-style:none"></ul>
+    </ul>
+  </div>
+</nav>
+
+<div class="admin-page">
+  <div class="admin-inner" id="admin-content">
+    <div class="loading-spinner"><div class="spinner"></div><div>Checking access...</div></div>
+  </div>
+</div>
+
+<footer>
+  <div class="footer-inner"><div class="footer-bottom"><p>&copy; 2026 African Athlete Talent Platform.</p></div></div>
+</footer>
+
+<script type="module">
+import { API, getAuthState, showToast } from '/js/main.js';
+
+async function initAdmin() {
+  const container = document.getElementById('admin-content');
+  const user = await getAuthState();
+  if (!user || user.role !== 'admin') {
+    container.innerHTML = `<div class="empty-state" style="padding:5rem 2rem"><div class="icon">🔒</div><h2 style="margin-bottom:1rem;color:var(--primary-dark)">Admin Access Required</h2><p>You need admin privileges to access this panel.</p><a href="/pages/login.html" class="btn btn-green" style="margin-top:1.5rem">Login as Admin</a></div>`;
+    return;
+  }
+  container.innerHTML = `
+    <div class="admin-header"><h1>🛡️ Admin Panel</h1><span style="color:var(--text-muted)">Welcome, ${user.name}</span></div>
+    <div class="admin-tabs">
+      <button class="admin-tab active" data-tab="pending">⏳ Pending Approval</button>
+      <button class="admin-tab" data-tab="all">🏆 All Athletes</button>
+      <button class="admin-tab" data-tab="users">👥 All Users</button>
+    </div>
+    <div id="tab-pending" class="admin-panel active"><div id="pending-content"><div class="loading-spinner"><div class="spinner"></div><div>Loading...</div></div></div></div>
+    <div id="tab-all" class="admin-panel"><div id="all-content"><div class="loading-spinner"><div class="spinner"></div><div>Loading...</div></div></div></div>
+    <div id="tab-users" class="admin-panel"><div id="users-content"><div class="loading-spinner"><div class="spinner"></div><div>Loading...</div></div></div></div>`;
+
+  document.querySelectorAll('.admin-tab').forEach(tab => {
+    tab.addEventListener('click', () => {
+      document.querySelectorAll('.admin-tab').forEach(t => t.classList.remove('active'));
+      document.querySelectorAll('.admin-panel').forEach(p => p.classList.remove('active'));
+      tab.classList.add('active');
+      document.getElementById(`tab-${tab.dataset.tab}`).classList.add('active');
+    });
+  });
+  loadPending(); loadAllAthletes(); loadUsers();
+}
+
+async function loadPending() {
+  const el = document.getElementById('pending-content');
+  try {
+    const { athletes } = await (await fetch(`${API}/admin/athletes/pending`, { credentials:'include' })).json();
+    if (!athletes.length) { el.innerHTML=`<div class="empty-state"><div class="icon">✅</div><p>No pending athletes!</p></div>`; return; }
+    el.innerHTML=`<table class="data-table"><thead><tr><th>Name</th><th>Sport</th><th>Country</th><th>Age</th><th>Actions</th></tr></thead><tbody>${athletes.map(a=>`<tr><td><strong>${a.name}</strong></td><td>${a.sport}</td><td>${a.country}</td><td>${a.age||'—'}</td><td style="display:flex;gap:0.4rem"><button class="btn btn-green btn-sm" onclick="approveAthlete(${a.id})">✅ Approve</button><button class="btn btn-sm" style="background:#ef4444;color:white" onclick="rejectAthlete(${a.id})">❌ Reject</button></td></tr>`).join('')}</tbody></table>`;
+  } catch { el.innerHTML=`<div class="empty-state"><p>Failed to load.</p></div>`; }
+}
+
+async function loadAllAthletes() {
+  const el = document.getElementById('all-content');
+  try {
+    const { athletes } = await (await fetch(`${API}/admin/athletes`, { credentials:'include' })).json();
+    if (!athletes.length) { el.innerHTML=`<div class="empty-state"><p>No athletes yet.</p></div>`; return; }
+    el.innerHTML=`<table class="data-table"><thead><tr><th>Name</th><th>Sport</th><th>Country</th><th>Status</th><th>Featured</th><th>Actions</th></tr></thead><tbody>${athletes.map(a=>`<tr><td><strong>${a.name}</strong></td><td>${a.sport}</td><td>${a.country}</td><td><span class="status-badge status-${a.status}">${a.status}</span></td><td>${a.is_featured?'⭐ Yes':'—'}</td><td style="display:flex;gap:0.4rem;flex-wrap:wrap">${a.status!=='approved'?`<button class="btn btn-green btn-sm" onclick="approveAthlete(${a.id})">✅</button>`:''} ${a.status!=='rejected'?`<button class="btn btn-sm" style="background:#ef4444;color:white" onclick="rejectAthlete(${a.id})">❌</button>`:''}<button class="btn btn-sm" style="background:var(--accent);color:var(--primary-dark)" onclick="toggleFeature(${a.id},${a.is_featured})">${a.is_featured?'★ Unfeature':'☆ Feature'}</button></td></tr>`).join('')}</tbody></table>`;
+  } catch { el.innerHTML=`<div class="empty-state"><p>Failed to load.</p></div>`; }
+}
+
+async function loadUsers() {
+  const el = document.getElementById('users-content');
+  try {
+    const { users } = await (await fetch(`${API}/admin/users`, { credentials:'include' })).json();
+    el.innerHTML=`<table class="data-table"><thead><tr><th>Name</th><th>Email</th><th>Role</th><th>Joined</th></tr></thead><tbody>${users.map(u=>`<tr><td><strong>${u.name}</strong></td><td>${u.email}</td><td><span class="status-badge ${u.role==='admin'?'status-approved':'status-pending'}">${u.role}</span></td><td>${new Date(u.created_at).toLocaleDateString()}</td></tr>`).join('')}</tbody></table>`;
+  } catch { el.innerHTML=`<div class="empty-state"><p>Failed to load.</p></div>`; }
+}
+
+window.approveAthlete = async id => { await fetch(`${API}/admin/athletes/${id}/approve`,{method:'PATCH',credentials:'include'}); showToast('Athlete approved!'); loadPending(); loadAllAthletes(); };
+window.rejectAthlete = async id => { await fetch(`${API}/admin/athletes/${id}/reject`,{method:'PATCH',credentials:'include'}); showToast('Athlete rejected','error'); loadPending(); loadAllAthletes(); };
+window.toggleFeature = async (id, isFeatured) => { await fetch(`${API}/admin/athletes/${id}/feature`,{method:'PATCH',headers:{'Content-Type':'application/json'},credentials:'include',body:JSON.stringify({featured:!isFeatured})}); showToast(!isFeatured?'Athlete featured!':'Athlete unfeatured'); loadAllAthletes(); };
+
+initAdmin();
+</script>
+</body>
+</html>

@@ -1,0 +1,17 @@
+{
+  "name": "afritalent",
+  "version": "1.0.0",
+  "description": "African Athlete Talent Platform",
+  "type": "module",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node --watch server.js"
+  },
+  "dependencies": {
+    "cookie-parser": "^1.4.7",
+    "dotenv": "^17.3.1",
+    "express": "^4.21.2",
+    "pg": "^8.13.3"
+  }
+}
